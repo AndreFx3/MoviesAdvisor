@@ -22,7 +22,6 @@ import com.redmadrobot.chronos.ChronosConnector;
 
 import java.net.URL;
 
-import info.movito.themoviedbapi.TmdbApi;
 import info.movito.themoviedbapi.Utils;
 import info.movito.themoviedbapi.model.MovieDb;
 
@@ -32,7 +31,8 @@ public class MainActivity extends AppCompatActivity
     private ChronosConnector mConnector = new ChronosConnector();
     private TextView titleTV;
     private TextView overviewTV;
-    private ImageView imageView;
+    private ImageView IVBackdrop;
+    private ImageView IVPoster;
     private MovieOperation mMovieOperation;
 
     @Override
@@ -45,7 +45,8 @@ public class MainActivity extends AppCompatActivity
 
         titleTV = (TextView) findViewById(R.id.titleTV);
         overviewTV = (TextView) findViewById(R.id.overviewTV);
-        imageView = (ImageView) findViewById(R.id.IV);
+        IVBackdrop = (ImageView) findViewById(R.id.IVBackdrop);
+        IVPoster = (ImageView) findViewById(R.id.IVPoster);
 
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
@@ -80,8 +81,10 @@ public class MainActivity extends AppCompatActivity
     private void showData(MovieDb movie){
         titleTV.setText(movie.getOriginalTitle());
         overviewTV.setText(movie.getOverview());
-        URL imageUrl = Utils.createImageUrl(mMovieOperation.mTmdbApi, movie.getBackdropPath(), "w500");
-        Glide.with(this).load(imageUrl.toString()).into(imageView);
+        URL PosterImageUrl = Utils.createImageUrl(mMovieOperation.mTmdbApi, movie.getPosterPath(), "w500");
+        Glide.with(this).load(PosterImageUrl.toString()).into(IVPoster);
+        URL BackdropImageUrl = Utils.createImageUrl(mMovieOperation.mTmdbApi, movie.getBackdropPath(), "w500");
+        Glide.with(this).load(BackdropImageUrl.toString()).into(IVBackdrop);
     }
 
     private void showDataLoadError(Exception exception){

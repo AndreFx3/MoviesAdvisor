@@ -20,7 +20,7 @@ class MovieOperation extends ChronosOperation<MovieDb> {
         final MovieDb result;
         mTmdbApi = new TmdbApi("28bc6b158afe109a061df8f0e8c986c6");
         TmdbMovies movies = mTmdbApi.getMovies();
-        result = movies.getMovie(284052, "en");
+        result = movies.getMovie(188927, "en");
 
         return result;
     }
