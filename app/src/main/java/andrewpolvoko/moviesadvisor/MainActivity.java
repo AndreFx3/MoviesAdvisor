@@ -1,10 +1,10 @@
 package andrewpolvoko.moviesadvisor;
 
 import android.os.Bundle;
+import android.os.PersistableBundle;
 import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
-import android.view.View;
 import android.support.design.widget.NavigationView;
+import android.support.design.widget.Snackbar;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
@@ -12,16 +12,40 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.ImageView;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import com.bumptech.glide.Glide;
+import com.redmadrobot.chronos.ChronosConnector;
+
+import java.net.URL;
+
+import info.movito.themoviedbapi.TmdbApi;
+import info.movito.themoviedbapi.Utils;
+import info.movito.themoviedbapi.model.MovieDb;
 
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener {
 
+    private ChronosConnector mConnector = new ChronosConnector();
+    private TextView titleTV;
+    private TextView overviewTV;
+    private ImageView imageView;
+    private MovieOperation mMovieOperation;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        mConnector.onCreate(this, savedInstanceState);
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+
+        titleTV = (TextView) findViewById(R.id.titleTV);
+        overviewTV = (TextView) findViewById(R.id.overviewTV);
+        imageView = (ImageView) findViewById(R.id.IV);
 
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
@@ -40,6 +64,32 @@ public class MainActivity extends AppCompatActivity
 
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
+
+        mMovieOperation = new MovieOperation();
+        mConnector.runOperation(mMovieOperation , false);
+    }
+
+    public void onOperationFinished(final MovieOperation.Result result) {
+        if (result.isSuccessful()) {
+            showData(result.getOutput());
+        } else {
+            showDataLoadError(result.getException());
+        }
+    }
+
+    private void showData(MovieDb movie){
+        titleTV.setText(movie.getOriginalTitle());
+        overviewTV.setText(movie.getOverview());
+        URL imageUrl = Utils.createImageUrl(mMovieOperation.mTmdbApi, movie.getBackdropPath(), "w500");
+        Glide.with(this).load(imageUrl.toString()).into(imageView);
+    }
+
+    private void showDataLoadError(Exception exception){
+        /*StringWriter sw = new StringWriter();
+        PrintWriter pw = new PrintWriter(sw);
+        exception.printStackTrace(pw);
+        sw.toString();*/
+        Toast.makeText(this, exception.getMessage(), Toast.LENGTH_SHORT ).show();
     }
 
     @Override
@@ -97,5 +147,23 @@ public class MainActivity extends AppCompatActivity
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
         return true;
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        mConnector.onResume();
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle outState, PersistableBundle outPersistentState) {
+        super.onSaveInstanceState(outState, outPersistentState);
+        mConnector.onSaveInstanceState(outState);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        mConnector.onPause();
     }
 }
