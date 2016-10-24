@@ -8,7 +8,6 @@ import com.redmadrobot.chronos.ChronosOperationResult;
 
 import info.movito.themoviedbapi.TmdbApi;
 import info.movito.themoviedbapi.TmdbMovies;
-import info.movito.themoviedbapi.Utils;
 import info.movito.themoviedbapi.model.MovieDb;
 
 
