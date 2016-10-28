@@ -1,172 +1,133 @@
 package andrewpolvoko.moviesadvisor;
 
 import android.os.Bundle;
-import android.os.PersistableBundle;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.NavigationView;
-import android.support.design.widget.Snackbar;
-import android.support.v4.view.GravityCompat;
-import android.support.v4.widget.DrawerLayout;
-import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.GridLayoutManager;
+import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.ImageView;
-import android.widget.TextView;
-import android.widget.Toast;
 
-import com.bumptech.glide.Glide;
 import com.redmadrobot.chronos.ChronosConnector;
 
-import java.net.URL;
+import java.util.List;
 
-import info.movito.themoviedbapi.Utils;
+import co.moonmonkeylabs.realmrecyclerview.RealmRecyclerView;
+import info.movito.themoviedbapi.TmdbMovies;
 import info.movito.themoviedbapi.model.MovieDb;
+import io.realm.Realm;
+import io.realm.RealmResults;
+import io.realm.Sort;
 
-public class MainActivity extends AppCompatActivity
-        implements NavigationView.OnNavigationItemSelectedListener {
+public class MainActivity extends AppCompatActivity implements
+        RealmRecyclerView.OnLoadMoreListener,
+        RealmRecyclerView.OnRefreshListener {
 
-    private ChronosConnector mConnector = new ChronosConnector();
-    private TextView titleTV;
-    private TextView overviewTV;
-    private ImageView IVBackdrop;
-    private ImageView IVPoster;
-    private MovieOperation mMovieOperation;
+    private Realm realm;
+    private RealmRecyclerView realmRecyclerView;
+    private RealmResults<MovieRealmEntity> movieList;
+    private boolean isGridEnabled = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        mConnector.onCreate(this, savedInstanceState);
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+        getSupportActionBar().setTitle(R.string.in_theaters);
 
-        titleTV = (TextView) findViewById(R.id.titleTV);
-        overviewTV = (TextView) findViewById(R.id.overviewTV);
-        IVBackdrop = (ImageView) findViewById(R.id.IVBackdrop);
-        IVPoster = (ImageView) findViewById(R.id.IVPoster);
+        realmRecyclerView = (RealmRecyclerView) findViewById(R.id.realm_recycler_view);
+        realm = Realm.getDefaultInstance();
 
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-            }
-        });
 
-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
-        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
-                this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
-        drawer.setDrawerListener(toggle);
-        toggle.syncState();
-
-        NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
-        navigationView.setNavigationItemSelectedListener(this);
-
-        mMovieOperation = new MovieOperation();
-        mConnector.runOperation(mMovieOperation , false);
-    }
-
-    public void onOperationFinished(final MovieOperation.Result result) {
-        if (result.isSuccessful()) {
-            showData(result.getOutput());
-        } else {
-            showDataLoadError(result.getException());
-        }
-    }
-
-    private void showData(MovieDb movie){
-        titleTV.setText(movie.getOriginalTitle());
-        overviewTV.setText(movie.getOverview());
-        URL PosterImageUrl = Utils.createImageUrl(mMovieOperation.mTmdbApi, movie.getPosterPath(), "w500");
-        Glide.with(this).load(PosterImageUrl.toString()).into(IVPoster);
-        URL BackdropImageUrl = Utils.createImageUrl(mMovieOperation.mTmdbApi, movie.getBackdropPath(), "w500");
-        Glide.with(this).load(BackdropImageUrl.toString()).into(IVBackdrop);
-    }
-
-    private void showDataLoadError(Exception exception){
-        /*StringWriter sw = new StringWriter();
-        PrintWriter pw = new PrintWriter(sw);
-        exception.printStackTrace(pw);
-        sw.toString();*/
-        Toast.makeText(this, exception.getMessage(), Toast.LENGTH_SHORT ).show();
-    }
-
-    @Override
-    public void onBackPressed() {
-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
-        if (drawer.isDrawerOpen(GravityCompat.START)) {
-            drawer.closeDrawer(GravityCompat.START);
-        } else {
-            super.onBackPressed();
-        }
+        movieList = realm.where(MovieRealmEntity.class).findAllSorted("releaseDate", Sort.DESCENDING);
+        RecyclerViewLinearAdapter adapter = new RecyclerViewLinearAdapter(this, movieList, true, false);
+        realmRecyclerView.setAdapter(adapter);
+        realmRecyclerView.setOnLoadMoreListener(this);
+        realmRecyclerView.setOnRefreshListener(this);
+        if (realmRecyclerView.getRecycleView().getAdapter().getItemCount() == 0)
+            loadNextPage();
+        //realmRecyclerView.enableShowLoadMore();
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.main, menu);
         return true;
     }
 
     @Override
+    public void onLoadMore(Object o) {
+        loadNextPage();
+    }
+
+    @Override
+    public void onRefresh() {
+        downloadResultsPage(1);
+    }
+
+    public void loadNextPage() {
+        realmRecyclerView.setRefreshing(true);
+        int nextPage = (realmRecyclerView.getRecycleView().getAdapter().getItemCount() / 20) + 1;
+        downloadResultsPage(nextPage);
+    }
+
+    public void downloadResultsPage(final int page) {
+        new Thread(new Runnable() {
+            public void run() {
+
+                while (MyApplication.mTmdbApi == null)
+                    try {
+                        Thread.sleep(200);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
+                TmdbMovies movies = MyApplication.mTmdbApi.getMovies();
+                List<MovieDb> moviesList = movies.getNowPlayingMovies("en", page).getResults();
+
+                Realm realm = Realm.getDefaultInstance();
+                realm.beginTransaction();
+                for (MovieDb movie : moviesList) {
+                    realm.copyToRealmOrUpdate(new MovieRealmEntity(movie));
+                }
+                realm.commitTransaction();
+                realm.close();
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        realmRecyclerView.setRefreshing(false);
+                    }
+                });
+            }
+        }).start();
+    }
+
+    @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
+        if (id == R.id.change_layout) {
+            if (isGridEnabled) {
+                realmRecyclerView.getRecycleView().setLayoutManager(new LinearLayoutManager(this));
+                realmRecyclerView.setAdapter(new RecyclerViewLinearAdapter(this, movieList, true, false));
+                item.setIcon(R.drawable.ic_grid_layout_white_24dp);
+                isGridEnabled = false;
 
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
+            } else {
+                realmRecyclerView.getRecycleView().setLayoutManager(new GridLayoutManager(this, 3));
+                realmRecyclerView.setAdapter(new RecyclerViewGridAdapter(this, movieList, true, false));
+                item.setIcon(R.drawable.ic_list_layout_white_24dp);
+                isGridEnabled = true;
+            }
         }
-
         return super.onOptionsItemSelected(item);
     }
 
-    @SuppressWarnings("StatementWithEmptyBody")
     @Override
-    public boolean onNavigationItemSelected(MenuItem item) {
-        // Handle navigation view item clicks here.
-        int id = item.getItemId();
-
-        if (id == R.id.nav_camera) {
-            // Handle the camera action
-        } else if (id == R.id.nav_gallery) {
-
-        } else if (id == R.id.nav_slideshow) {
-
-        } else if (id == R.id.nav_manage) {
-
-        } else if (id == R.id.nav_share) {
-
-        } else if (id == R.id.nav_send) {
-
-        }
-
-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
-        drawer.closeDrawer(GravityCompat.START);
-        return true;
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        mConnector.onResume();
-    }
-
-    @Override
-    public void onSaveInstanceState(Bundle outState, PersistableBundle outPersistentState) {
-        super.onSaveInstanceState(outState, outPersistentState);
-        mConnector.onSaveInstanceState(outState);
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        mConnector.onPause();
+    protected void onDestroy() {
+        super.onDestroy();
+        realm.close();
+        realm = null;
     }
 }

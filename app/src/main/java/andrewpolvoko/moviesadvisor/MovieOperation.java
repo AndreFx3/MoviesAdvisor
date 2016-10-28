@@ -6,21 +6,35 @@ import android.support.annotation.Nullable;
 import com.redmadrobot.chronos.ChronosOperation;
 import com.redmadrobot.chronos.ChronosOperationResult;
 
+import java.util.List;
+
 import info.movito.themoviedbapi.TmdbApi;
 import info.movito.themoviedbapi.TmdbMovies;
 import info.movito.themoviedbapi.model.MovieDb;
+import io.realm.Realm;
 
 
 class MovieOperation extends ChronosOperation<MovieDb> {
-    public TmdbApi mTmdbApi;
+
     @Nullable
     @Override
     public MovieDb run() {
-        final MovieDb result;
-        mTmdbApi = new TmdbApi("28bc6b158afe109a061df8f0e8c986c6");
-        TmdbMovies movies = mTmdbApi.getMovies();
-        result = movies.getMovie(188927, "en");
+        final MovieDb result = null;
+        if (MyApplication.mTmdbApi == null)
+            MyApplication.mTmdbApi = new TmdbApi(Constants.TMDB_API_KEY);
 
+        TmdbMovies movies = MyApplication.mTmdbApi.getMovies();
+        List<MovieDb> moviesList;
+        moviesList = movies.getNowPlayingMovies("en", 1).getResults();
+
+        Realm realm = Realm.getDefaultInstance();
+        realm.beginTransaction();
+        for (MovieDb movie : moviesList) {
+            realm.copyToRealmOrUpdate(new MovieRealmEntity(movie));
+        }
+
+        realm.commitTransaction();
+        realm.close();
         return result;
     }
 
