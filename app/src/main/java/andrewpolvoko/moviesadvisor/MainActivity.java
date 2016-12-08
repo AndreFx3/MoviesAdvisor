@@ -7,9 +7,6 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
-
-import com.redmadrobot.chronos.ChronosConnector;
 
 import java.util.List;
 
@@ -50,6 +47,7 @@ public class MainActivity extends AppCompatActivity implements
             loadNextPage();
         //realmRecyclerView.enableShowLoadMore();
     }
+
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -98,6 +96,7 @@ public class MainActivity extends AppCompatActivity implements
                     @Override
                     public void run() {
                         realmRecyclerView.setRefreshing(false);
+                        realmRecyclerView.enableShowLoadMore();
                     }
                 });
             }
