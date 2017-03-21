@@ -7,7 +7,7 @@ android {
     defaultConfig {
         applicationId "andrewpolvoko.moviesadvisor"
         minSdkVersion 21
-        targetSdkVersion 24
+        targetSdkVersion 25
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
@@ -35,7 +35,7 @@ dependencies {
     compile 'com.uphyca:stetho_realm:2.0.0'
     compile 'com.github.thorbenprimke:realm-recyclerview:0.9.25'
     testCompile 'junit:junit:4.12'
-    compile 'com.android.support.constraint:constraint-layout:1.0.0-beta1'
+    compile 'com.android.support.constraint:constraint-layout:1.0.0-beta4'
     compile 'com.android.support:customtabs:25.0.1'
 }
 android {

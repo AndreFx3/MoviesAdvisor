@@ -2,11 +2,9 @@ package andrewpolvoko.moviesadvisor;
 
 import android.app.Application;
 import android.content.Context;
-import android.os.AsyncTask;
 
 import com.facebook.stetho.Stetho;
 import com.uphyca.stetho_realm.RealmInspectorModulesProvider;
-
 
 import info.movito.themoviedbapi.TmdbApi;
 import io.realm.Realm;
@@ -21,11 +19,15 @@ public class MyApplication extends Application {
         super.onCreate();
         context = getApplicationContext();
 
-        new Thread(new Runnable() {
-            public void run() {
-                mTmdbApi = new TmdbApi(Constants.TMDB_API_KEY);
-            }
-        }).start();
+        try {
+            new Thread(new Runnable() {
+                public void run() {
+                    mTmdbApi = new TmdbApi(Constants.TMDB_API_KEY);
+                }
+            }).start();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
         Realm.init(this);
         //Realm.deleteRealm(new RealmConfiguration.Builder().build());
@@ -39,4 +41,6 @@ public class MyApplication extends Application {
                             .build());
         }
     }
+
+
 }

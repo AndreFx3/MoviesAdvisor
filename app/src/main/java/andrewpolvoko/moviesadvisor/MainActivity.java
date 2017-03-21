@@ -25,6 +25,7 @@ public class MainActivity extends AppCompatActivity implements
     private RealmRecyclerView realmRecyclerView;
     private RealmResults<MovieRealmEntity> movieList;
     private boolean isGridEnabled = false;
+    private Menu menu;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,16 +44,24 @@ public class MainActivity extends AppCompatActivity implements
         realmRecyclerView.setAdapter(adapter);
         realmRecyclerView.setOnLoadMoreListener(this);
         realmRecyclerView.setOnRefreshListener(this);
-        if (realmRecyclerView.getRecycleView().getAdapter().getItemCount() == 0)
+        if (realmRecyclerView.getRecycleView().getAdapter().getItemCount() == 0) {
             loadNextPage();
+        }
         //realmRecyclerView.enableShowLoadMore();
     }
-
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.main, menu);
+        this.menu = menu;
+        updateLayout();
         return true;
+    }
+
+    @Override
+    protected void onRestoreInstanceState(Bundle savedInstanceState) {
+        isGridEnabled = savedInstanceState.getBoolean("isGridEnabled");
+        super.onRestoreInstanceState(savedInstanceState);
     }
 
     @Override
@@ -107,20 +116,36 @@ public class MainActivity extends AppCompatActivity implements
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
         if (id == R.id.change_layout) {
-            if (isGridEnabled) {
-                realmRecyclerView.getRecycleView().setLayoutManager(new LinearLayoutManager(this));
-                realmRecyclerView.setAdapter(new RecyclerViewLinearAdapter(this, movieList, true, false));
-                item.setIcon(R.drawable.ic_grid_layout_white_24dp);
-                isGridEnabled = false;
-
-            } else {
-                realmRecyclerView.getRecycleView().setLayoutManager(new GridLayoutManager(this, 3));
-                realmRecyclerView.setAdapter(new RecyclerViewGridAdapter(this, movieList, true, false));
-                item.setIcon(R.drawable.ic_list_layout_white_24dp);
-                isGridEnabled = true;
-            }
+            if (isGridEnabled) isGridEnabled = false;
+            else isGridEnabled = true;
+            updateLayout();
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    public void updateLayout() {
+        MenuItem layoutIcon = menu.findItem(R.id.change_layout);
+        if (isGridEnabled) {
+            realmRecyclerView.getRecycleView().setLayoutManager(new LinearLayoutManager(this));
+            realmRecyclerView.setAdapter(new RecyclerViewLinearAdapter(this, movieList, true, false));
+            layoutIcon.setIcon(R.drawable.ic_grid_layout_white_24dp);
+
+        } else {
+            realmRecyclerView.getRecycleView().setLayoutManager(new GridLayoutManager(this, 3));
+            realmRecyclerView.setAdapter(new RecyclerViewGridAdapter(this, movieList, true, false));
+            layoutIcon.setIcon(R.drawable.ic_list_layout_white_24dp);
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        outState.putBoolean("isGridEnabled", isGridEnabled);
+        super.onSaveInstanceState(outState);
     }
 
     @Override
